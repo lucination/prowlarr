@@ -1,0 +1,51 @@
+name: Native container build and digest smoke
+on:
+  workflow_call:
+    inputs:
+      sha:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
+    outputs:
+      digest:
+        value: ${{ jobs.native.outputs.digest }}
+permissions:
+  contents: read
+jobs:
+  native:
+    if: github.repository == 'lucination/prowlarr' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.sha }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+          image=ghcr.io/lucination/prowlarr
+          tag="$image:candidate-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$ARCH"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx build --platform "linux/$ARCH" --build-arg "SOURCE_REVISION=$SOURCE_SHA" --provenance=false --output "type=registry,oci-mediatypes=false" -t "$tag" --metadata-file metadata.json .
+          digest=$(python3 -c 'import json; print(json.load(open("metadata.json"))["containerimage.digest"])')
+          # Pull precisely what the registry stored, not the builder's local tag.
+          docker pull "$image@$digest"
+          python3 .github/scripts/smoke_image.py "$image@$digest" "$SOURCE_SHA" "$ARCH"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"

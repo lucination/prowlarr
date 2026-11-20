@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!package.json
+!yarn.lock
+!tsconfig.json
+!global.json
+!azure-pipelines.yml
+!LICENSE
+!frontend/**
+!src/**
+src/**/bin
+src/**/obj

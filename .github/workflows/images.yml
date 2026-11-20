@@ -1,0 +1,83 @@
+name: Publish container images
+on:
+  workflow_run:
+    workflows: ['Mirror CI', 'Sync stable upstream']
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+# Includes BOTH CI and sync completion paths. Never cancel a promotion midway.
+concurrency:
+  group: ghcr-prowlarr-main
+  cancel-in-progress: false
+jobs:
+  select:
+    if: github.repository == 'lucination/prowlarr' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.admit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - id: admit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export MAIN_SHA=$(gh api repos/lucination/prowlarr/git/ref/heads/main --jq .object.sha)
+          python3 .github/scripts/image_policy.py
+  validate:
+    needs: select
+    if: needs.select.outputs.sha != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.select.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - run: bash .github/scripts/validate.sh
+  amd64:
+    needs: [select, validate]
+    uses: ./.github/workflows/image-platform.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      sha: ${{ needs.select.outputs.sha }}
+      runner: ubuntu-24.04
+      arch: amd64
+  arm64:
+    needs: [select, validate]
+    uses: ./.github/workflows/image-platform.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      sha: ${{ needs.select.outputs.sha }}
+      runner: ubuntu-24.04-arm
+      arch: arm64
+  promote:
+    needs: [select, amd64, arm64]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.select.outputs.sha }}
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ needs.select.outputs.sha }}
+          AMD64_DIGEST: ${{ needs.amd64.outputs.digest }}
+          ARM64_DIGEST: ${{ needs.arm64.outputs.digest }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          python3 .github/scripts/promote_image.py

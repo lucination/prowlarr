@@ -9,6 +9,8 @@ export MSBUILDDISABLENODEREUSE=1
 export PYTHONDONTWRITEBYTECODE=1
 python3 .github/scripts/test_upstream_sync.py
 python3 .github/scripts/test_image_policy.py
+python3 .github/scripts/test_image_promotion.py
+python3 .github/scripts/test_container_health.py
 dotnet test src/Prowlarr.Api.V1.Test/Prowlarr.Api.V1.Test.csproj \
   --configuration Release --maxcpucount:1 \
   -p:UseSharedCompilation=false -p:SolutionDir="$PWD/src/" \

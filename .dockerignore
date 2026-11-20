@@ -4,8 +4,11 @@
 !yarn.lock
 !tsconfig.json
 !global.json
+!.editorconfig
+!.yarnrc
 !azure-pipelines.yml
 !LICENSE
+!distribution/docker/healthcheck.sh
 !frontend/**
 !src/**
 src/**/bin

@@ -56,7 +56,8 @@ def smoke(image, revision, arch):
         status = json.loads(request('/api/v1/system/status', key))
         assert status['appData'] == '/config', status
         assert status['packageUpdateMechanism'].lower() == 'docker', status
-        assert status['version'].startswith('3.') or status['version'].startswith('4.'), status
+        package = dict(line.split('=', 1) for line in run('docker', 'exec', name, 'cat', '/app/package_info').splitlines())
+        assert status['version'] == package['PackageVersion'], status
         # Bootstrap page must include and serve the real compiled frontend.
         html = request('/login')
         assets = re.findall(r'(?:src|href)="([^"]+\.(?:js|css)(?:\?[^\"]*)?)"', html)
@@ -67,10 +68,14 @@ def smoke(image, revision, arch):
         host['instanceName'] = name
         request('/api/v1/config/host', key, host)
         assert json.loads(request('/api/v1/config/host', key))['instanceName'] == name
+        ui = json.loads(request('/api/v1/config/ui', key))
+        ui['showRelativeDates'] = not ui['showRelativeDates']
+        request('/api/v1/config/ui', key, ui)
         run('docker', 'restart', '--time', '30', name)
         ready()
         assert ET.fromstring(run('docker', 'exec', name, 'cat', '/config/config.xml')).findtext('ApiKey') == key
         assert json.loads(request('/api/v1/config/host', key))['instanceName'] == name
+        assert json.loads(request('/api/v1/config/ui', key))['showRelativeDates'] == ui['showRelativeDates']
         assert run('docker', 'exec', name, 'sqlite3', '/config/prowlarr.db', 'PRAGMA integrity_check;') == 'ok'
         assert run('docker', 'exec', name, 'id', '-u') == '9696'
         print(json.dumps({'image': image, 'image_id': info['Id'], 'revision': revision, 'architecture': arch,

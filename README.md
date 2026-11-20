@@ -1,3 +1,8 @@
+> **lucination fork:** Source-built amd64/arm64 containers are published through
+> validated main CI and upstream-sync completion. See [container documentation](distribution/docker/README.md)
+> for `ghcr.io/lucination/prowlarr`, persistent configuration, immutable tags,
+> and GHCR visibility requirements.
+
 # Prowlarr
 
 **Customized mirror:** Usenet redirects are optional; their enabled default is unchanged. See [fork usage, validation and upstream synchronization](FORK.md). The badges and project information below refer to upstream Prowlarr, not this mirror's CI or releases.

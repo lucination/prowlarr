@@ -2,6 +2,7 @@
 FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS ui
 WORKDIR /src
 COPY package.json yarn.lock ./
+COPY .yarnrc ./
 RUN yarn install --frozen-lockfile --network-timeout 120000
 COPY frontend frontend
 COPY tsconfig.json ./
@@ -11,6 +12,7 @@ RUN yarn build --env production
 FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS backend
 WORKDIR /src
 COPY global.json ./
+COPY .editorconfig ./
 COPY src src
 COPY azure-pipelines.yml ./
 # Dependency also serializes the two memory-intensive source builds.
@@ -36,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl sqlite3 &&
 WORKDIR /app/bin
 COPY --from=backend /package /app
 COPY LICENSE /app/bin/LICENSE
+COPY distribution/docker/healthcheck.sh /app/healthcheck.sh
 ARG SOURCE_REVISION
 LABEL org.opencontainers.image.source="https://github.com/lucination/prowlarr" \
       org.opencontainers.image.revision="$SOURCE_REVISION" \
@@ -44,5 +47,5 @@ LABEL org.opencontainers.image.source="https://github.com/lucination/prowlarr" \
 USER 9696:9696
 VOLUME /config
 EXPOSE 9696
-HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=3 CMD curl --disable --noproxy '*' --proto '=http' --max-time 3 --silent --fail --output /dev/null http://127.0.0.1:9696/ping || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=3 CMD ["/bin/sh", "/app/healthcheck.sh"]
 ENTRYPOINT ["/app/bin/Prowlarr", "-nobrowser", "-data=/config"]

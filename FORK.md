@@ -1,3 +1,11 @@
+## Automatic container publication
+
+This fork builds native amd64/arm64 images at `ghcr.io/lucination/prowlarr` after
+successful main CI or stable-upstream sync, with `latest` and immutable
+`sha-<full-commit>` tags. See [container usage and publication policy](distribution/docker/README.md)
+for nonroot `/config` persistence, source provenance, native runtime gates, and
+the owner-controlled GHCR public-visibility prerequisite. Publication is not deployment.
+
 # Customized mirror: optional Usenet redirect
 
 This is a customized mirror of [Prowlarr](https://github.com/Prowlarr/Prowlarr), not an official Prowlarr release. The upstream copyright notices and GPL-3.0 license in `LICENSE` continue to apply, including obligations when distributing binaries or source to others.

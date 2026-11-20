@@ -47,6 +47,13 @@ class PromotionTests(unittest.TestCase):
         self.assertEqual(calls[0][0], 'gh', 'current-main fence must precede latest write')
         self.assertIn('--raw', calls[-1], 'exact written target must be read back')
 
+    def test_exact_buildx_missing_target_can_create_first_publication(self):
+        error = f'ERROR: {release.IMAGE}:sha-{SHA}: not found\n'
+        calls = self.exercise(CompletedProcess([], 1, '', error))
+        creates = [call for call in calls if 'create' in call]
+        self.assertEqual(len(creates), 2)
+        self.assertIn(release.IMAGE + ':sha-' + SHA, creates[0])
+
     def test_immutable_conflict_never_writes(self):
         bad = {'manifests': INDEX['manifests'][:1]}
         effects = []
@@ -55,7 +62,8 @@ class PromotionTests(unittest.TestCase):
         self.assertEqual(effects, [])
 
     def test_ambiguous_lookup_does_not_publish(self):
-        for error in ['unauthorized', 'network timeout', 'denied: permission denied']:
+        for error in ['unauthorized', 'network timeout', 'denied: permission denied',
+                      'lookup ghcr.io: host not found', 'denied: package not found']:
             effects = []
             with self.subTest(error=error), self.assertRaises(RuntimeError):
                 self.exercise(CompletedProcess([], 1, '', error), effects=effects)

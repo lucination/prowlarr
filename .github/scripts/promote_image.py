@@ -25,12 +25,16 @@ def main():
         raise ValueError('invalid native digest')
     immutable = f'{IMAGE}:sha-{sha}'
     # Distinguish a registry 404 from auth/network errors. Never create/overwrite on
-    # an ambiguous inspect failure. The CLI's manifest-unknown is the only absence.
+    # an ambiguous inspect failure. Match only explicit manifest-unknown or the
+    # CLI's exact missing-target diagnostic, never a DNS/auth "not found" substring.
     existing = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', immutable, '--raw'],
                               capture_output=True, text=True)
     if existing.returncode == 0:
         verify_index(json.loads(existing.stdout), expected)
-    elif 'manifest unknown' in existing.stderr.lower() or 'not found' in existing.stderr.lower():
+    elif existing.stderr.strip() in {
+            'manifest unknown', f'ERROR: {immutable}: manifest unknown',
+            f'{immutable}: manifest unknown', f'ERROR: {immutable}: not found',
+            f'{immutable}: not found'}:
         command('docker', 'buildx', 'imagetools', 'create', '--annotation',
                 'index:org.opencontainers.image.source=https://github.com/lucination/prowlarr',
                 '--annotation', f'index:org.opencontainers.image.revision={sha}',

@@ -30,7 +30,8 @@ class HealthTests(unittest.TestCase):
                 worker.start()
                 try:
                     env = dict(os.environ, http_proxy='http://127.0.0.1:1',
-                               ALL_PROXY='http://127.0.0.1:1', NO_PROXY='')
+                               HTTP_PROXY='http://127.0.0.1:1', all_proxy='http://127.0.0.1:1',
+                               ALL_PROXY='http://127.0.0.1:1', NO_PROXY='', no_proxy='')
                     result = subprocess.run(['sh', str(PROBE), str(server.server_port)],
                                             capture_output=True, env=env, timeout=5)
                     self.assertEqual(result.returncode == 0, status == 200, status)

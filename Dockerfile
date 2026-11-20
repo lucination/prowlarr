@@ -43,6 +43,7 @@ COPY distribution/docker/healthcheck.sh /app/healthcheck.sh
 ARG SOURCE_REVISION
 LABEL org.opencontainers.image.source="https://github.com/lucination/prowlarr" \
       org.opencontainers.image.revision="$SOURCE_REVISION" \
+      org.opencontainers.image.version="sha-$SOURCE_REVISION" \
       org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.title="Prowlarr (lucination fork)"
 USER 9696:9696

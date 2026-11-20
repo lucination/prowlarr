@@ -22,6 +22,7 @@ def smoke(image, revision, arch):
     assert health['StartPeriod'] == 90_000_000_000 and health['Retries'] == 3, health
     labels = info['Config']['Labels']
     assert labels['org.opencontainers.image.revision'] == revision
+    assert labels['org.opencontainers.image.version'] == 'sha-' + revision, 'must not inherit base OS version as application version'
     assert labels['org.opencontainers.image.source'] == 'https://github.com/lucination/prowlarr'
     name = 'prowlarr-smoke-' + uuid.uuid4().hex[:12]
     volume = name + '-config'

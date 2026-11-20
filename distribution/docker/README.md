@@ -29,7 +29,9 @@ rather than enabling the in-app binary updater. This workflow never deploys it.
   not release tags; a failed job can leave these behind but cannot promote them.
 
 `org.opencontainers.image.source` points to this fork and
-`org.opencontainers.image.revision` is the exact source commit. AssemblyVersion is
+`org.opencontainers.image.revision` is the exact source commit. OCI image version
+is `sha-<full-commit>`, not the base operating system's inherited version.
+AssemblyVersion is
 the upstream pipeline's three-component `majorVersion` plus `.0` (initially
 `3.0.2.0`), deliberately not the misleading development default `10.0.0.*` and
 not an invented upstream CI build number. Use the OCI revision or immutable tag

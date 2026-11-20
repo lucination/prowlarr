@@ -49,7 +49,17 @@ The sync workflow pushes with `GITHUB_TOKEN`, so a push-only image workflow woul
 silently miss scheduled sync updates. Its completion's `head_sha` is the old
 control commit, not necessarily the new merge; the image workflow resolves current
 main, freezes that SHA, and reruns the complete mirror validation before any
-candidate image publication.
+candidate image publication. A successful sync whose control SHA still equals
+current main is a no-op and skips image publication, avoiding daily rebuilds of
+the same immutable commit. A changed main still follows full validation and both
+native build/smoke gates.
+
+To repair a missing first publication without a new source commit, run **Publish
+container images** directly with **Run workflow** on main (a successful main
+**Mirror CI** manual run also remains eligible). These paths are not suppressed
+by the no-op-sync check. They intentionally do not bypass immutable-tag safety:
+if that SHA tag already exists with different rebuilt digests, publication fails
+instead of overwriting it.
 
 Both native jobs must build, push a candidate, pull its exact registry digest,
 and pass real health/UI/authenticated API/SQLite/persistence-restart smoke before

@@ -43,10 +43,16 @@ class AdmissionTests(unittest.TestCase):
         self.assertEqual(policy.select('workflow_run', event('Sync stable upstream', 'schedule'), NEW, 'refs/heads/main'), NEW)
         self.assertIsNone(policy.select('workflow_run', event(), NEW, 'refs/heads/main'))
 
+    def test_unchanged_successful_sync_does_not_rebuild_same_commit(self):
+        for trigger in ('schedule', 'workflow_dispatch'):
+            with self.subTest(trigger=trigger):
+                self.assertIsNone(policy.select('workflow_run', event('Sync stable upstream', trigger), SHA, 'refs/heads/main'))
+
     def test_manual_dispatch_only_default_main(self):
         for ref in ['refs/heads/topic', 'refs/tags/main', SHA]:
             self.assertIsNone(policy.select('workflow_dispatch', event(), SHA, ref))
         self.assertEqual(policy.select('workflow_dispatch', event(), SHA, 'refs/heads/main'), SHA)
+        self.assertEqual(policy.select('workflow_run', event('Mirror CI', 'workflow_dispatch'), SHA, 'refs/heads/main'), SHA)
 
     def test_late_completion_cannot_promote_latest(self):
         self.assertTrue(hasattr(policy, 'latest_allowed'), 'latest requires a final current-main fence')

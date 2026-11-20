@@ -41,7 +41,8 @@ def select(event_name, event, main_sha, ref):
     if run.get('name') == 'Sync stable upstream' and run.get('event') in ('schedule', 'workflow_dispatch'):
         # Sync's workflow head is the control commit, NOT the validated merge.
         # Resolve current main and revalidate that exact immutable object.
-        return main_sha
+        # No-op syncs must not rebuild an already-published immutable SHA daily.
+        return main_sha if run.get('head_sha') != main_sha else None
     return None
 
 

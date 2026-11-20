@@ -31,6 +31,10 @@ rather than enabling the in-app binary updater. This workflow never deploys it.
 `org.opencontainers.image.source` points to this fork and
 `org.opencontainers.image.revision` is the exact source commit. OCI image version
 is `sha-<full-commit>`, not the base operating system's inherited version.
+These labels reside in each platform's image config and are checked by the native
+pulled-digest smoke. Promotion does not add index annotations: the Docker manifest
+list format used here does not support them. Docker media types remain enabled
+to preserve and verify the shipped container healthcheck.
 AssemblyVersion is
 the upstream pipeline's three-component `majorVersion` plus `.0` (initially
 `3.0.2.0`), deliberately not the misleading development default `10.0.0.*` and
@@ -98,3 +102,14 @@ writes configuration through the API, restarts, checks persistence and SQLite
 integrity, then removes only its own container and volume. A sandbox where default
 Docker bridge DNS is unavailable may need `docker build --network=host`; this is a
 build-host workaround, not a runtime deployment setting.
+
+To diagnose assembly compatibility without publishing any tags, use existing
+registry digest references with the read-only probe:
+
+```sh
+python3 .github/scripts/check_image_assembly.py "$sha" "$amd64_digest" "$arm64_digest"
+```
+
+It runs the same assembly command as promotion with only `--dry-run` added and
+verifies that the returned manifest list contains exactly those two native digests
+and platforms. It reuses existing Docker credentials if needed and never logs in.

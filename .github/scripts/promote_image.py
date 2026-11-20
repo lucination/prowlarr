@@ -16,6 +16,13 @@ def inspect(ref):
     return json.loads(command('docker', 'buildx', 'imagetools', 'inspect', ref, '--raw'))
 
 
+def assembly_command(sha, expected):
+    # Docker manifest lists do not support index annotations. Provenance labels
+    # are already verified in each native image config by its pulled-digest smoke.
+    return ('docker', 'buildx', 'imagetools', 'create',
+            '-t', f'{IMAGE}:sha-{sha}', *(f'{IMAGE}@{digest}' for digest in expected.values()))
+
+
 def main():
     sha = os.environ['CANDIDATE_SHA']
     if not re.fullmatch('[0-9a-f]{40}', sha):
@@ -35,10 +42,7 @@ def main():
             'manifest unknown', f'ERROR: {immutable}: manifest unknown',
             f'{immutable}: manifest unknown', f'ERROR: {immutable}: not found',
             f'{immutable}: not found'}:
-        command('docker', 'buildx', 'imagetools', 'create', '--annotation',
-                'index:org.opencontainers.image.source=https://github.com/lucination/prowlarr',
-                '--annotation', f'index:org.opencontainers.image.revision={sha}',
-                '-t', immutable, *(f'{IMAGE}@{digest}' for digest in expected.values()))
+        command(*assembly_command(sha, expected))
         verify_index(inspect(immutable), expected)
     else:
         raise RuntimeError('immutable tag lookup failed; refusing publication')

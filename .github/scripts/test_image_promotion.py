@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 from subprocess import CompletedProcess
 import promote_image as release
+import check_image_assembly as preview
 
 SHA = 'a' * 40
 DIGESTS = {'amd64': 'sha256:' + '1' * 64, 'arm64': 'sha256:' + '2' * 64}
@@ -53,6 +54,20 @@ class PromotionTests(unittest.TestCase):
         creates = [call for call in calls if 'create' in call]
         self.assertEqual(len(creates), 2)
         self.assertIn(release.IMAGE + ':sha-' + SHA, creates[0])
+
+    def test_docker_manifest_assembly_uses_shared_command_without_annotations(self):
+        calls = self.exercise(CompletedProcess([], 1, '', 'manifest unknown'))
+        creates = [call for call in calls if 'create' in call]
+        self.assertEqual(creates[0], release.assembly_command(SHA, DIGESTS))
+        self.assertNotIn('--annotation', creates[0], 'Docker manifest lists cannot carry index annotations')
+
+    def test_registry_probe_adds_only_dry_run_to_shipped_assembly_command(self):
+        result = CompletedProcess([], 0, json.dumps(INDEX), '')
+        with patch.object(preview.subprocess, 'run', return_value=result) as invoke, \
+                contextlib.redirect_stdout(io.StringIO()):
+            preview.check(SHA, DIGESTS['amd64'], DIGESTS['arm64'])
+        shipped = release.assembly_command(SHA, DIGESTS)
+        self.assertEqual(invoke.call_args.args[0], (*shipped[:4], '--dry-run', *shipped[4:]))
 
     def test_immutable_conflict_never_writes(self):
         bad = {'manifests': INDEX['manifests'][:1]}

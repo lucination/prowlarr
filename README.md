@@ -1,5 +1,7 @@
 # Prowlarr
 
+**Customized mirror:** Usenet redirects are optional; their enabled default is unchanged. See [fork usage, validation and upstream synchronization](FORK.md). The badges and project information below refer to upstream Prowlarr, not this mirror's CI or releases.
+
 [![Build Status](https://dev.azure.com/Prowlarr/Prowlarr/_apis/build/status/Prowlarr.Prowlarr?branchName=develop)](https://dev.azure.com/Prowlarr/Prowlarr/_build/latest?definitionId=1&branchName=develop)
 [![Translation status](https://translate.servarr.com/widget/servarr/prowlarr/svg-badge.svg)](https://translate.servarr.com/engage/servarr/?utm_source=widget)
 [![Docker Pulls](https://img.shields.io/docker/pulls/hotio/prowlarr.svg)](https://wiki.servarr.com/prowlarr/installation/docker)

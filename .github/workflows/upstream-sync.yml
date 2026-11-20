@@ -1,0 +1,31 @@
+name: Sync stable upstream
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: upstream-sync-main
+  cancel-in-progress: false
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Validate and publish candidate (never force main)
+        run: |
+          git config user.name 'Hermes Mirror Bot'
+          git config user.email 'hermes@users.noreply.github.com'
+          python3 .github/scripts/upstream_sync.py --validate bash .github/scripts/validate.sh

@@ -37,7 +37,7 @@ namespace NzbDrone.Api.V1.Indexers
         private IDownloadService _downloadService { get; set; }
         private readonly Logger _logger;
 
-        public NewznabController(IndexerFactory indexerFactory,
+        public NewznabController(IIndexerFactory indexerFactory,
             IReleaseSearchService releaseSearchService,
             IIndexerLimitService indexerLimitService,
             IIndexerStatusService indexerStatusService,
@@ -262,8 +262,8 @@ namespace NzbDrone.Api.V1.Indexers
                 throw new BadRequestException("Failed to normalize provided link");
             }
 
-            // If Indexer is set to download via Redirect then just redirect to the link unless it's a Usenet indexer at which point it forces Redirect.
-            if (indexer.Protocol == DownloadProtocol.Usenet || (indexer.SupportsRedirect && indexerDef.Redirect))
+            // Honor the indexer's redirect setting for both Usenet and torrents.
+            if (indexer.SupportsRedirect && indexerDef.Redirect)
             {
                 _downloadService.RecordRedirect(unprotectedLink, id, source, host, file);
                 return RedirectPermanent(unprotectedLink);

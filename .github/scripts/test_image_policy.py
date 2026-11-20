@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 import copy
+import re
 import image_policy as policy
 
 SHA = 'a' * 40
@@ -63,6 +64,20 @@ class AdmissionTests(unittest.TestCase):
                 bad[0]['digest'] = 'sha256:' + '3' * 64
             with self.assertRaises(ValueError):
                 policy.verify_index({'manifests': bad}, expected)
+
+    def test_workflow_side_effects_require_validation_and_both_native_smokes(self):
+        workflows = Path(__file__).resolve().parents[1] / 'workflows'
+        source = (workflows / 'images.yml').read_text()
+        self.assertEqual(len(re.findall(r'^  (?:amd64|arm64):\n    needs: \[select, validate\]$', source, re.M)), 2)
+        self.assertIn('needs: [select, amd64, arm64]', source)
+        native = (workflows / 'image-platform.yml').read_text()
+        self.assertLess(native.index('python3 .github/scripts/smoke_image.py'), native.index('echo "digest=$digest"'))
+        self.assertIn('docker pull "$image@$digest"', native)
+        self.assertIn('ref: ${{ needs.select.outputs.sha }}', source)
+
+    def test_late_completion_cannot_replace_pending_newer_publication(self):
+        source = (Path(__file__).resolve().parents[1] / 'workflows/images.yml').read_text()
+        self.assertIn('queue: max', source, 'GitHub default single-pending queue can discard the current-main event when an older CI finishes late')
 
 
 if __name__ == '__main__':

@@ -16,6 +16,10 @@ def smoke(image, revision, arch):
     info = json.loads(run('docker', 'image', 'inspect', image))[0]
     assert info['Architecture'] == arch, info['Architecture']
     assert info['Config']['User'] == '9696:9696'
+    health = info['Config']['Healthcheck']
+    assert health['Test'] == ['CMD', '/bin/sh', '/app/healthcheck.sh'], health
+    assert health['Interval'] == 15_000_000_000 and health['Timeout'] == 5_000_000_000, health
+    assert health['StartPeriod'] == 90_000_000_000 and health['Retries'] == 3, health
     labels = info['Config']['Labels']
     assert labels['org.opencontainers.image.revision'] == revision
     assert labels['org.opencontainers.image.source'] == 'https://github.com/lucination/prowlarr'
@@ -24,6 +28,7 @@ def smoke(image, revision, arch):
     run('docker', 'volume', 'create', volume)
     try:
         run('docker', 'run', '-d', '--name', name, '--network', 'none', '--cpus', '2', '--memory', '1536m',
+            '--health-interval', '2s', '--health-start-period', '0s', '--health-retries', '2',
             '-v', volume + ':/config', image)
 
         def request(path, key=None, data=None, status=False):
@@ -48,6 +53,19 @@ def smoke(image, revision, arch):
                 time.sleep(2)
             raise AssertionError('image did not become healthy')
 
+        ready()
+        # Docker itself must observe healthy -> unhealthy -> healthy. Only the
+        # app process is stopped; healthcheck execs still run in the container.
+        run('docker', 'kill', '--signal=STOP', name)
+        try:
+            for _ in range(30):
+                if json.loads(run('docker', 'inspect', name))[0]['State']['Health']['Status'] == 'unhealthy':
+                    break
+                time.sleep(1)
+            else:
+                raise AssertionError('healthcheck did not detect a stopped application')
+        finally:
+            run('docker', 'kill', '--signal=CONT', name)
         ready()
         xml = run('docker', 'exec', name, 'cat', '/config/config.xml')
         key = ET.fromstring(xml).findtext('ApiKey')
@@ -80,7 +98,7 @@ def smoke(image, revision, arch):
         assert run('docker', 'exec', name, 'id', '-u') == '9696'
         print(json.dumps({'image': image, 'image_id': info['Id'], 'revision': revision, 'architecture': arch,
                           'ui_assets': len(assets), 'authenticated_api': True, 'restart_persistence': True,
-                          'sqlite_integrity': 'ok', 'updater': 'docker'}))
+                          'sqlite_integrity': 'ok', 'updater': 'docker', 'health_lifecycle': True}))
     except BaseException:
         subprocess.run(['docker', 'logs', '--tail', '100', name], check=False)
         raise

@@ -11,5 +11,6 @@
 !distribution/docker/healthcheck.sh
 !frontend/**
 !src/**
+!Logo/**
 src/**/bin
 src/**/obj

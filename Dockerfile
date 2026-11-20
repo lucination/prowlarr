@@ -14,6 +14,7 @@ WORKDIR /src
 COPY global.json ./
 COPY .editorconfig ./
 COPY src src
+COPY Logo Logo
 COPY azure-pipelines.yml ./
 # Dependency also serializes the two memory-intensive source builds.
 COPY --from=ui /src/_output/UI /package/bin/UI

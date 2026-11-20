@@ -54,7 +54,9 @@ and pass real health/UI/authenticated API/SQLite/persistence-restart smoke befor
 the multi-platform index is assembled. Promotion checks the exact two digests and
 platforms. An existing immutable tag with different digests fails closed instead
 of being overwritten (including a nondeterministic rebuild on retry).
-All publication paths share one concurrency group. Immediately before changing
+All publication paths share one concurrency group with `queue: max` (up to 100
+pending runs), so a late old completion does not replace a newer pending run.
+Immediately before changing
 `latest`, promotion rereads main and withholds a stale candidate; GitHub main and
 GHCR cannot be updated atomically, so a main advance during the final registry
 write remains a narrow cross-service race, not a strict atomic guarantee.

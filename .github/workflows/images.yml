@@ -10,6 +10,8 @@ permissions:
 concurrency:
   group: ghcr-prowlarr-main
   cancel-in-progress: false
+  # Preserve pending newer publications when an older CI completes late.
+  queue: max
 jobs:
   select:
     if: github.repository == 'lucination/prowlarr' && github.ref == 'refs/heads/main'

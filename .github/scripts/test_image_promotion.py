@@ -16,8 +16,8 @@ ENV = {'CANDIDATE_SHA': SHA, 'AMD64_DIGEST': DIGESTS['amd64'], 'ARM64_DIGEST': D
 
 
 class PromotionTests(unittest.TestCase):
-    def exercise(self, existing, current=SHA):
-        effects = []
+    def exercise(self, existing, current=SHA, effects=None):
+        effects = [] if effects is None else effects
 
         def command(*args):
             effects.append(args)
@@ -49,13 +49,17 @@ class PromotionTests(unittest.TestCase):
 
     def test_immutable_conflict_never_writes(self):
         bad = {'manifests': INDEX['manifests'][:1]}
+        effects = []
         with self.assertRaises(ValueError):
-            self.exercise(CompletedProcess([], 0, json.dumps(bad), ''))
+            self.exercise(CompletedProcess([], 0, json.dumps(bad), ''), effects=effects)
+        self.assertEqual(effects, [])
 
     def test_ambiguous_lookup_does_not_publish(self):
         for error in ['unauthorized', 'network timeout', 'denied: permission denied']:
+            effects = []
             with self.subTest(error=error), self.assertRaises(RuntimeError):
-                self.exercise(CompletedProcess([], 1, '', error))
+                self.exercise(CompletedProcess([], 1, '', error), effects=effects)
+            self.assertEqual(effects, [])
 
 
 if __name__ == '__main__':
